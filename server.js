@@ -33,6 +33,8 @@ function init() {
                 addDepartment();
             } else if (response.mainMenu === 'Add a role') {
                 addRole();
+            } else if (response.mainMenu === 'Add an employee') {
+                addEmployee();
             }
         });
     };
@@ -59,11 +61,13 @@ const showRoles = function() {
 };
 
 const showEmployees = function() {
-    db.query(`SELECT employees.id, employees.first_name, employees.last_name, roles.title AS title, departments.name AS department, roles.salary AS salary, employees.manager_id AS manager
+    db.query(`SELECT employees.id, employees.first_name, employees.last_name, roles.title AS title, departments.name AS department, roles.salary AS salary, CONCAT (manager.first_name, " ", manager.last_name) AS manager
     FROM employees
     JOIN roles ON employees.role_id = roles.id
     JOIN departments ON roles.department_id = departments.id
+    LEFT JOIN employees manager ON employees.manager_id = manager.id
     ORDER BY employees.id;`, (err, results) => {
+        if (err) throw err;
         console.table(results);
         init();
     });
@@ -152,6 +156,73 @@ const addRole = function () {
     });
 };
 
+// Add An Employee
+
+const addEmployee = function() {
+    inquirer.prompt([
+        {
+            type: "input",
+            name: "firstName",
+            message: "What is the first name of this employee?",
+            validate: addFirstName => {
+                if (addFirstName) {
+                    return true;
+                } else {
+                    console.log("Please enter the employee's first name");
+                    return false;
+                }
+            }
+        }, 
+        {
+            type: "input",
+            name: "lastName",
+            message: "What is the last name of this employee?",
+            validate: addLastName => {
+                if (addLastName) {
+                    return true;
+                } else {
+                    console.log("Please enter this employee's last name");
+                    return false;
+                }
+            }
+        }
+    ]).then(answer => {
+        db.query(`SELECT roles.id, roles.title FROM roles;`, (err, data) => {
+            if (err) throw err;
+
+            const roles = data.map(({ id, title}) => ({ name: title, value: id }));
+
+            inquirer.prompt([
+                {
+                    type: "list",
+                    name: "role",
+                    message: "What role does this employee have in the company?",
+                    choices: roles
+                }
+            ]).then(roleChoice => {
+                db.query(`SELECT * FROM employees;`, (err, data) => {
+                    if (err) throw err;
+
+                    const managers = data.map(({ id, first_name, last_name}) => ({ name: first_name + " " + last_name, value: id }));
+
+                    inquirer.prompt([
+                        {
+                            type: 'list',
+                            name: 'manager',
+                            message: "Who is the manager of this employee?",
+                            choices: managers
+                        }
+                    ]).then(managerChoice => {
+                        db.query(`INSERT INTO employees (first_name, last_name, role_id, manager_id) VALUES (?, ?, ?, ?);`, [answer.firstName, answer.lastName, roleChoice.role, managerChoice.manager], (err, result) => {
+                            if (err) throw err;
+                            showEmployees();
+                        });
+                    });
+                });
+            });
+        });
+    });
+};
 
 
 
