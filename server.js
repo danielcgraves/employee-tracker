@@ -1,10 +1,6 @@
 const db = require('./db/connection.js');
 const inquirer = require('inquirer');
-const express = require('express');
-const cTable = require('console.table');
-const { response } = require('express');
-const { listenerCount } = require('./db/connection.js');
-
+require('console.table');
 
 
 const mainMenu = [
@@ -19,13 +15,10 @@ const mainMenu = [
             'Add a department',
             'Add a role',
             'Add an employee',
-            'Update and employee role'
+            'Update an employee role'
         ],
     }
 ];
-
-
-
 
 function init() {
     inquirer.prompt(mainMenu)
@@ -34,14 +27,20 @@ function init() {
                 showDepartments();
             } else if (response.mainMenu === 'View all roles') {
                 showRoles();
+            } else if (response.mainMenu === 'View all employees') {
+                showEmployees();
+            } else if (response.mainMenu === 'Add a department') {
+                addDepartment();
+            } else if (response.mainMenu === 'Add a role') {
+                addRole();
             }
-        })
+        });
     };
 
-init()
+init();
 
+// "Show" Functions
 
-// Shows departments table
 const showDepartments = function() {
     db.query(`SELECT * FROM departments`, (err, results) => {
         console.table(results);
@@ -59,6 +58,99 @@ const showRoles = function() {
     });
 };
 
+const showEmployees = function() {
+    db.query(`SELECT employees.id, employees.first_name, employees.last_name, roles.title AS title, departments.name AS department, roles.salary AS salary, employees.manager_id AS manager
+    FROM employees
+    JOIN roles ON employees.role_id = roles.id
+    JOIN departments ON roles.department_id = departments.id
+    ORDER BY employees.id;`, (err, results) => {
+        console.table(results);
+        init();
+    });
+    
+};
+
+// Add A Department
+
+const addDepartment = function() {
+    inquirer.prompt([
+        {
+            type: "input",
+            name: "addDept",
+            message: "What is the name of the department that you would like to add?",
+            validate: addDept => {
+                if (addDept) {
+                    return true;
+                } else {
+                    console.log('Please add a department');
+                    return false;
+                }
+            } 
+        }
+    ]).then(answer => {
+        db.query(`INSERT INTO departments (name) VALUES (?);`, answer.addDept, (err, res) => {
+            if (err) throw err;
+            showDepartments();
+        });
+    });
+};
+
+// Add A Role
+
+const addRole = function () {
+    inquirer.prompt([
+        {
+            type: "input",
+            name: "role",
+            message: "What is the name of the role you would like to add?",
+            validate: addRole => {
+                if (addRole) {
+                    return true;
+                } else {
+                    console.log('Please enter a new role');
+                    return false;
+                }
+            }
+        },
+        {
+            type: "input",
+            name: "salary",
+            message: "What is the salary for this role?",
+            validate: salary => {
+                if (salary) {
+                    return true;
+                } else if (salary === isNaN) {
+                    console.log('Please enter a number');
+                    return false;
+                } else {
+                    console.log('Please enter a salary');
+                    return false;
+                }
+            }
+        }
+    ]).then(answer => {
+        db.query(`SELECT name, id FROM departments;`, (err, data) => {
+            if (err) throw err;
+
+            const departments = data.map(({ name, id}) => ({ name: name, value: id }));
+
+            inquirer.prompt([
+                {
+                    type: "list",
+                    name: "department",
+                    message: "What department is this role a part of?",
+                    choices: departments
+                }
+            ]).then(choice => {
+
+                db.query(`INSERT INTO roles (department_id, title, salary) VALUES (?, ?, ?);`, [choice.department, answer.role, answer.salary], (err, result) => { 
+                    if (err) throw err;
+                    showRoles();
+                });
+            });
+        });
+    });
+};
 
 
 
@@ -69,12 +161,4 @@ const showRoles = function() {
 
 
 
-
-/* const PORT = process.env.PORT || 3001; */
-/* const app = express(); */
-
-//Middleware
-
-/* app.use(express.urlencoded({ extended: false}));
-app.use(express.json()); */
 
