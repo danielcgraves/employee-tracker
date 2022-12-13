@@ -226,6 +226,8 @@ const addEmployee = function() {
     });
 };
 
+// Update An Employee Role
+
 const updateEmployee = function() {
     db.query(`SELECT * FROM employees;`, (err, data) => {
         if (err) throw err;
@@ -253,7 +255,7 @@ const updateEmployee = function() {
                         choices: roles
                     }
                 ]).then(roleChoice => {
-                    db.query(`UPDATE employees SET role_id = ? WHERE id = ?;`, [employeeChoice, roleChoice.role], (err, result) => {
+                    db.query(`UPDATE employees SET role_id = ? WHERE id = ?;`, [roleChoice.role, employeeChoice.name], (err, result) => {
                         if (err) throw err;
                         
                         showEmployees();
