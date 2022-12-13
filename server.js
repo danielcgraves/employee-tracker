@@ -35,6 +35,8 @@ function init() {
                 addRole();
             } else if (response.mainMenu === 'Add an employee') {
                 addEmployee();
+            } else if (response.mainMenu === 'Update an employee role') {
+                updateEmployee();
             }
         });
     };
@@ -224,7 +226,43 @@ const addEmployee = function() {
     });
 };
 
+const updateEmployee = function() {
+    db.query(`SELECT * FROM employees;`, (err, data) => {
+        if (err) throw err;
 
+        const employees = data.map(({ id, first_name, last_name }) => ({ name: first_name + " " + last_name, value: id }));
+
+        inquirer.prompt([
+            {
+                type: "list",
+                name: "name",
+                message: "Select and employee to update their information.",
+                choices: employees
+            }
+        ]).then(employeeChoice => {
+            db.query(`SELECT * FROM roles;`, (err, data) => {
+            if (err) throw err;
+
+            const roles = data.map(({ id, title }) => ({ name: title, value: id }));
+
+                inquirer.prompt([
+                    {
+                        type: "list",
+                        name: "role",
+                        message: "What is the role you'd like this employee to have?",
+                        choices: roles
+                    }
+                ]).then(roleChoice => {
+                    db.query(`UPDATE employees SET role_id = ? WHERE id = ?;`, [employeeChoice, roleChoice.role], (err, result) => {
+                        if (err) throw err;
+                        
+                        showEmployees();
+                    });
+                });
+            });
+        });
+    });
+};
 
 
 
